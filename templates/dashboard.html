@@ -1,0 +1,406 @@
+
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="team-badge">
+                            {% if user.favorite_team %}
+                                {{ user.favorite_team[:2].upper() }}
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h4 class="mb-1">Olá, {{ user.username }}!</h4>
+                        <p class="text-muted mb-0">
+                            {% if user.user_type == 'estabelecimento' %}
+                                Estabelecimento: {{ user.establishment_name }}
+                            {% else %}
+                                Torcedor{% if user.favorite_team %} do {{ user.favorite_team }}{% endif %}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-outline-primary" onclick="getLocation()">
+                            <i class="fas fa-map-marker-alt me-2"></i>Atualizar Localização
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.user_type == 'torcedor' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>Estabelecimentos Próximos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="establishmentsLoading" class="text-center py-3">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-2">Buscando estabelecimentos próximos...</p>
+                </div>
+                <div id="establishmentsList" class="d-none"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-futbol me-2"></i>Jogos de Hoje
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="matchesLoading" class="text-center py-3">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-2">Carregando jogos de hoje...</p>
+                </div>
+                <div id="matchesList" class="d-none"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Chats Ativos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card establishment-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-users text-primary mb-2" style="font-size: 2rem;"></i>
+                                <h6>Chat Geral do Bairro</h6>
+                                <p class="text-muted small">Converse com torcedores da região</p>
+                                <a href="/chat/bairro" class="btn btn-primary-custom btn-sm">
+                                    <i class="fas fa-comment me-1"></i>Entrar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card establishment-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-store text-primary mb-2" style="font-size: 2rem;"></i>
+                                <h6>Chat do Estabelecimento</h6>
+                                <p class="text-muted small">Chat com quem está no mesmo local</p>
+                                <button class="btn btn-primary-custom btn-sm" onclick="joinEstablishmentChat()">
+                                    <i class="fas fa-comment me-1"></i>Entrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="matchChats"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para seleção de estabelecimento -->
+<div class="modal fade" id="establishmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Selecione o Estabelecimento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="establishmentModalBody">
+                <!-- Establishments will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para interesse em jogo -->
+<div class="modal fade" id="matchInterestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Demonstrar Interesse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="matchInterestForm">
+                    <input type="hidden" id="modalMatchId">
+                    <div class="mb-3">
+                        <label class="form-label">Qual time você está torcendo?</label>
+                        <div id="teamOptions"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ranking" class="form-label">Nível de interesse (1-5)</label>
+                        <input type="range" class="form-range" id="ranking" min="1" max="5" value="3">
+                        <div class="d-flex justify-content-between">
+                            <small>Pouco</small>
+                            <small>Muito</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary-custom w-100">
+                        Confirmar Interesse
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="floating-action-btn" onclick="getLocation()" title="Atualizar localização">
+    <i class="fas fa-location-crosshairs"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let userLocation = null;
+let availableEstablishments = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    getLocation();
+    loadTodayMatches();
+});
+
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            
+            // Update user location on server
+            fetch('/location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userLocation)
+            });
+            
+            // Load nearby establishments
+            loadNearbyEstablishments();
+        }, function(error) {
+            console.error('Error getting location:', error);
+            document.getElementById('establishmentsLoading').innerHTML = 
+                '<p class="text-warning">Não foi possível obter sua localização. Permita o acesso à localização.</p>';
+        });
+    } else {
+        document.getElementById('establishmentsLoading').innerHTML = 
+            '<p class="text-danger">Geolocalização não é suportada neste navegador.</p>';
+    }
+}
+
+function loadNearbyEstablishments() {
+    fetch('/nearby-establishments')
+        .then(response => response.json())
+        .then(data => {
+            availableEstablishments = data.establishments;
+            displayEstablishments(data.establishments);
+        })
+        .catch(error => {
+            console.error('Error loading establishments:', error);
+            document.getElementById('establishmentsLoading').innerHTML = 
+                '<p class="text-danger">Erro ao carregar estabelecimentos próximos.</p>';
+        });
+}
+
+function displayEstablishments(establishments) {
+    const container = document.getElementById('establishmentsList');
+    const loading = document.getElementById('establishmentsLoading');
+    
+    if (establishments.length === 0) {
+        loading.innerHTML = '<p class="text-muted">Nenhum estabelecimento encontrado próximo à sua localização.</p>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    establishments.forEach(establishment => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card establishment-card">
+                    <div class="card-body">
+                        <h6 class="card-title">${establishment.name}</h6>
+                        <p class="card-text small text-muted">${establishment.address}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">★ ${establishment.rating}</span>
+                            <button class="btn btn-outline-primary btn-sm" onclick="selectEstablishment('${establishment.place_id}', '${establishment.name}')">
+                                <i class="fas fa-check me-1"></i>Estou aqui
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+    loading.classList.add('d-none');
+    container.classList.remove('d-none');
+}
+
+function selectEstablishment(placeId, name) {
+    // Here you would typically save the user's current establishment
+    alert(`Você está agora em: ${name}`);
+    // You could also redirect to establishment-specific chat
+}
+
+function loadTodayMatches() {
+    fetch('/matches/today')
+        .then(response => response.json())
+        .then(data => {
+            displayMatches(data.matches);
+        })
+        .catch(error => {
+            console.error('Error loading matches:', error);
+            document.getElementById('matchesLoading').innerHTML = 
+                '<p class="text-danger">Erro ao carregar jogos de hoje.</p>';
+        });
+}
+
+function displayMatches(matches) {
+    const container = document.getElementById('matchesList');
+    const loading = document.getElementById('matchesLoading');
+    
+    if (matches.length === 0) {
+        loading.innerHTML = '<p class="text-muted">Nenhum jogo da Série A hoje.</p>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    matches.forEach(match => {
+        const matchDate = new Date(match.date);
+        const timeString = matchDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card match-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-4 text-center">
+                                <strong>${match.home_team}</strong>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="badge bg-secondary">${timeString}</div>
+                                <div class="small text-muted mt-1">vs</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <strong>${match.away_team}</strong>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-6">
+                                <button class="btn btn-outline-success btn-sm w-100" onclick="showMatchInterest(${match.id}, '${match.home_team}', '${match.away_team}')">
+                                    <i class="fas fa-heart me-1"></i>Tenho Interesse
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <a href="/chat/match-${match.id}" class="btn btn-primary-custom btn-sm w-100">
+                                    <i class="fas fa-comment me-1"></i>Chat do Jogo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+    loading.classList.add('d-none');
+    container.classList.remove('d-none');
+}
+
+function showMatchInterest(matchId, homeTeam, awayTeam) {
+    document.getElementById('modalMatchId').value = matchId;
+    document.getElementById('teamOptions').innerHTML = `
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="supportingTeam" id="home" value="${homeTeam}">
+            <label class="form-check-label" for="home">${homeTeam}</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="supportingTeam" id="away" value="${awayTeam}">
+            <label class="form-check-label" for="away">${awayTeam}</label>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('matchInterestModal'));
+    modal.show();
+}
+
+function joinEstablishmentChat() {
+    if (availableEstablishments.length === 0) {
+        alert('Primeiro atualize sua localização e selecione um estabelecimento.');
+        return;
+    }
+    
+    // Show establishment selection modal
+    let html = '';
+    availableEstablishments.forEach(establishment => {
+        html += `
+            <div class="card establishment-card mb-2">
+                <div class="card-body">
+                    <h6>${establishment.name}</h6>
+                    <p class="small text-muted">${establishment.address}</p>
+                    <a href="/chat/establishment-${establishment.place_id}" class="btn btn-primary-custom btn-sm">
+                        Entrar no Chat
+                    </a>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('establishmentModalBody').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('establishmentModal'));
+    modal.show();
+}
+
+document.getElementById('matchInterestForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        match_id: document.getElementById('modalMatchId').value,
+        supporting_team: document.querySelector('input[name="supportingTeam"]:checked').value,
+        ranking: document.getElementById('ranking').value
+    };
+    
+    fetch('/match/interest', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Interesse registrado com sucesso!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('matchInterestModal'));
+            modal.hide();
+        }
+    });
+});
+</script>
+{% endblock %}

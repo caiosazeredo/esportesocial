@@ -1,0 +1,183 @@
+<!-- templates/chat.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Chat - {{ room_id.replace('-', ' ').title() }}
+                </h5>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="chat-container" id="chatContainer">
+                    {% for message in messages %}
+                    <div class="chat-message {% if message.user_id == session.user_id %}own{% else %}other{% endif %}">
+                        {% if message.user_id != session.user_id %}
+                        <small class="fw-bold">{{ message.user.username }}</small><br>
+                        {% endif %}
+                        {{ message.message }}
+                        <small class="d-block mt-1 opacity-75">{{ message.timestamp.strftime('%H:%M') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if 'match-' in room_id %}
+                <div class="p-3 border-bottom">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="quick-action-btn" onclick="sendQuickMessage('🎉 GOOOOL!')">
+                            🎉 GOOOOL!
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('⚽ Que jogada!')">
+                            ⚽ Que jogada!
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('🤦‍♂️ Perdeu gol!')">
+                            🤦‍♂️ Perdeu gol!
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('🟨 Cartão merecido!')">
+                            🟨 Cartão merecido!
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('🔥 Que jogo!')">
+                            🔥 Que jogo!
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('😤 Juiz ladrão!')">
+                            😤 Juiz ladrão!
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="p-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" placeholder="Digite sua mensagem..." maxlength="500">
+                        <button class="btn btn-primary-custom" type="button" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-users me-2"></i>Participantes Online
+                </h6>
+                <div id="onlineUsers" class="d-flex flex-wrap gap-2">
+                    <!-- Online users will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const socket = io();
+const roomId = '{{ room_id }}';
+const userId = {{ session.user_id }};
+const userName = '{{ user.username }}';
+
+// Join room
+socket.emit('join', {room: roomId});
+
+// Listen for messages
+socket.on('message', function(data) {
+    addMessageToChat(data);
+});
+
+// Listen for status messages
+socket.on('status', function(data) {
+    addStatusMessage(data.msg);
+});
+
+// Send message function
+function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (message) {
+        socket.emit('message', {
+            room: roomId,
+            message: message,
+            type: 'text'
+        });
+        messageInput.value = '';
+    }
+}
+
+// Send quick message function
+function sendQuickMessage(message) {
+    socket.emit('message', {
+        room: roomId,
+        message: message,
+        type: 'quick'
+    });
+}
+
+// Add message to chat
+function addMessageToChat(data) {
+    const chatContainer = document.getElementById('chatContainer');
+    const messageDiv = document.createElement('div');
+    
+    const isOwn = data.username === userName;
+    messageDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+    
+    if (data.team_colors && isOwn) {
+        messageDiv.style.background = data.team_colors.primary;
+        messageDiv.style.color = data.team_colors.secondary;
+    }
+    
+    let messageHtml = '';
+    if (!isOwn) {
+        messageHtml += `<small class="fw-bold">${data.username}</small><br>`;
+    }
+    
+    messageHtml += `${data.message}`;
+    messageHtml += `<small class="d-block mt-1 opacity-75">${data.timestamp}</small>`;
+    
+    messageDiv.innerHTML = messageHtml;
+    chatContainer.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Add status message
+function addStatusMessage(message) {
+    const chatContainer = document.getElementById('chatContainer');
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'text-center text-muted small my-2';
+    statusDiv.innerHTML = `<em>${message}</em>`;
+    chatContainer.appendChild(statusDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Enter key to send message
+document.getElementById('messageInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Leave room when page unloads
+window.addEventListener('beforeunload', function() {
+    socket.emit('leave', {room: roomId});
+});
+
+// Auto-scroll to bottom on load
+document.addEventListener('DOMContentLoaded', function() {
+    const chatContainer = document.getElementById('chatContainer');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+});
+</script>
+{% endblock %}

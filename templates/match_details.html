@@ -1,0 +1,89 @@
+<!-- templates/match_details.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom mb-4">
+            <div class="card-body">
+                <div class="row align-items-center text-center">
+                    <div class="col-4">
+                        <div class="team-badge mx-auto mb-2">
+                            {{ match.home_team[:2].upper() }}
+                        </div>
+                        <h5>{{ match.home_team }}</h5>
+                        <span class="badge bg-primary fs-4">{{ match.home_score }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-muted">
+                            <i class="fas fa-clock"></i>
+                            {{ match.match_date.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                        <div class="badge bg-success mt-2">{{ match.status }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="team-badge mx-auto mb-2">
+                            {{ match.away_team[:2].upper() }}
+                        </div>
+                        <h5>{{ match.away_team }}</h5>
+                        <span class="badge bg-primary fs-4">{{ match.away_score }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Interessados ({{ interested_users|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for interest in interested_users %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="team-badge me-3">
+                        {{ interest.user.username[:2].upper() }}
+                    </div>
+                    <div>
+                        <strong>{{ interest.user.username }}</strong>
+                        <div class="text-muted small">
+                            Torcendo para: {{ interest.supporting_team }}
+                            <span class="badge bg-warning ms-2">Interesse: {{ '⭐' * interest.ranking }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Chat do Jogo
+                </h5>
+            </div>
+            <div class="card-body">
+                <a href="/chat/match-{{ match.id }}" class="btn btn-primary-custom w-100 mb-3">
+                    <i class="fas fa-comment me-2"></i>Entrar no Chat
+                </a>
+                
+                <div class="small text-muted">
+                    <p><i class="fas fa-info-circle me-1"></i>
+                    No chat do jogo você pode:</p>
+                    <ul class="list-unstyled">
+                        <li>• Conversar com outros torcedores</li>
+                        <li>• Usar mensagens rápidas</li>
+                        <li>• Torcer junto em tempo real</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

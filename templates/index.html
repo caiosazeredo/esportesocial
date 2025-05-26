@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card card-custom text-center p-5">
+            <div class="card-body">
+                <i class="fas fa-futbol text-primary mb-4" style="font-size: 4rem;"></i>
+                <h1 class="card-title mb-4">EsporteSocial</h1>
+                <p class="card-text lead mb-4">
+                    Conecte-se com outros torcedores no seu bar favorito e nunca assista um jogo sozinho!
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('register') }}" class="btn btn-primary-custom btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>Criar Conta
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- templates/register.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card card-custom">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">Criar Conta</h2>
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Nome de usuário</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de usuário</label>
+                        <div>
+                            <input type="radio" class="form-check-input" id="torcedor" name="user_type" value="torcedor" checked>
+                            <label class="form-check-label ms-2" for="torcedor">Torcedor</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="form-check-input" id="estabelecimento" name="user_type" value="estabelecimento">
+                            <label class="form-check-label ms-2" for="estabelecimento">Estabelecimento</label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="teamDiv">
+                        <label for="favorite_team" class="form-label">Time do coração</label>
+                        <select class="form-select" id="favorite_team">
+                            <option value="">Selecione seu time</option>
+                            {% for team in teams %}
+                            <option value="{{ team }}">{{ team }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 d-none" id="establishmentDiv">
+                        <label for="establishment_name" class="form-label">Nome do estabelecimento</label>
+                        <input type="text" class="form-control" id="establishment_name">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fas fa-user-plus me-2"></i>Criar Conta
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('login') }}">Já tem conta? Faça login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
+    const teamDiv = document.getElementById('teamDiv');
+    const establishmentDiv = document.getElementById('establishmentDiv');
+    
+    userTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'estabelecimento') {
+                teamDiv.classList.add('d-none');
+                establishmentDiv.classList.remove('d-none');
+            } else {
+                teamDiv.classList.remove('d-none');
+                establishmentDiv.classList.add('d-none');
+            }
+        });
+    });
+    
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            user_type: document.querySelector('input[name="user_type"]:checked').value,
+            favorite_team: document.getElementById('favorite_team').value,
+            establishment_name: document.getElementById('establishment_name').value
+        };
+        
+        fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '/dashboard';
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
